@@ -1,6 +1,7 @@
 require 'csv'
 require 'google/apis/civicinfo_v2'
 require 'erb'
+require 'date'
 
 def clean_zipcode(zipcode)
   zipcode.to_s.rjust(5,'0')[0..4]
@@ -53,6 +54,20 @@ def save_thank_you_letter(id,form_letter)
   end
 end
 
+#Task: find out at which hours the most people registered
+#Have for each hour of the day a count of how many people registered
+#Take the 3 hours at which the most amount of people registered,
+#those will be the peak hours that we will use for advertising
+
+def peak_registration_hours array_of_hours
+  array_of_hours.sort_by {|_key, value| value}.reverse.map {|key, value| key}[0..2]
+end
+
+def count_registration_number_at_hour array_of_hours, hour
+  array_of_hours[hour] += 1
+end
+
+
 
 puts 'EventManager initialized.'
 
@@ -66,22 +81,28 @@ contents = CSV.open(
    header_converters: :symbol
 )
 
+hours_registration_counter = Hash[(0 .. 23).to_a.map { |hour| [hour, 0] }]
+
 contents.each do |row|
   
   id = row[0]
   name = row[:first_name]
   zipcode = row[:zipcode]
   phone_number = row[:homephone]
+  registration_date = row[:regdate]
   
-
-
   zipcode = clean_zipcode(row[:zipcode])
   legislators = legislators_by_zipcode(zipcode)
   form_letter = erb_template.result(binding)
   phone_number = clean_phone_number(phone_number)
+  registration_date = DateTime.strptime(registration_date, "%m/%d/%Y %k:%M")
   
-  puts phone_number
+  count_registration_number_at_hour(hours_registration_counter, registration_date.hour)
+
+  puts registration_date.hour
   # save_thank_you_letter(id,form_letter)
 end
 
-
+p hours_registration_counter
+puts
+p peak_registration_hours(hours_registration_counter)
