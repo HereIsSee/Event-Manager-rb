@@ -59,6 +59,16 @@ end
 #Take the 3 hours at which the most amount of people registered,
 #those will be the peak hours that we will use for advertising
 
+def format_string_to_datetime string
+  date = DateTime.strptime(string, "%m/%d/%Y %k:%M").strftime("%Y/%m/%d %H:%M")
+  date[0] = "2"
+  date = DateTime.strptime(date, "%Y/%m/%d %H:%M")
+end
+
+def count_registration_number_at_hour array_of_days, day
+  array_of_days[day] += 1
+end
+
 def peak_registration_hours array_of_hours
   array_of_hours.sort_by {|_key, value| value}.reverse.map {|key, value| key}[0..2]
 end
@@ -82,6 +92,10 @@ contents = CSV.open(
 )
 
 hours_registration_counter = Hash[(0 .. 23).to_a.map { |hour| [hour, 0] }]
+day_registration_counter = {
+  "Monday"=> 0, "Tuesday"=> 0, "Wednesday"=> 0, "Thursday"=> 0, 
+  "Friday"=> 0, "Saturday"=> 0, "Sunday"=> 0
+}
 
 contents.each do |row|
   
@@ -95,14 +109,13 @@ contents.each do |row|
   legislators = legislators_by_zipcode(zipcode)
   form_letter = erb_template.result(binding)
   phone_number = clean_phone_number(phone_number)
-  registration_date = DateTime.strptime(registration_date, "%m/%d/%Y %k:%M")
+  registration_date = format_string_to_datetime registration_date
   
   count_registration_number_at_hour(hours_registration_counter, registration_date.hour)
-
-  puts registration_date.hour
+  
+  count_registration_number_at_hour(day_registration_counter, registration_date.strftime( "%A" ))
   # save_thank_you_letter(id,form_letter)
 end
 
-p hours_registration_counter
-puts
-p peak_registration_hours(hours_registration_counter)
+p day_registration_counter
+
